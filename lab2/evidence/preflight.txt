@@ -1,0 +1,16 @@
+== preflight 2026-11-09T16:11:41Z ==
+Linux DESKTOP-BCV3LVN 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
+[ ok ] docker: Docker version 28.1.1, build 4eba377
+[ ok ] docker compose: 2.35.1-desktop.1
+[ ok ] память Docker: 7942 МиБ
+архитектура: x86_64
+[ ok ] vm.max_map_count=262144
+[ ok ] порт 3001 свободен
+[ ok ] порт 5601 свободен
+[ ok ] порт 8081 свободен
+[ ok ] порт 9090 свободен
+[ ok ] порт 9200 свободен
+[ ok ] порт 16686 свободен
+[ ok ] curl найден
+[ ok ] python3 найден
+ИТОГ: окружение готово

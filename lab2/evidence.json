@@ -1,0 +1,57 @@
+{
+  "student_id": "413732",
+  "run_id": "before-mw9hp8pt-10f5e0",
+  "first_error_time_utc": "2026-11-09T16:40:20.604Z",
+  "users_affected": 100,
+  "failing_service": "redis",
+  "root_cause_class": "cache_eviction",
+  "key_metric": {
+    "query": "redis_memory_used_bytes",
+    "peak_value": 1194248
+  },
+  "trap_class": "log_time_offset",
+  "trace_ids": [
+    "298909ed019a27b49ef48d6d4cf089a7",
+    "e98be6d34cda4672ec55fa92aa610615",
+    "96e7424f27d48017180c5552afa47320"
+  ],
+  "changes": [
+    {
+      "what": "REDIS_MAXMEMORY_MB",
+      "old": "1",
+      "new": "64"
+    },
+    {
+      "what": "ORDERS_TZ",
+      "old": "America/New_York",
+      "new": "UTC"
+    },
+    {
+      "what": "ORDERS_LOG_TIME_MODE",
+      "old": "local_naive",
+      "new": "utc_iso"
+    }
+  ],
+  "_allowed": {
+    "failing_service": [
+      "gateway",
+      "orders",
+      "payments",
+      "postgres",
+      "redis"
+    ],
+    "root_cause_class": [
+      "db_connection_pool",
+      "memory_limit_oom",
+      "missing_db_index",
+      "retry_amplification",
+      "cache_eviction"
+    ],
+    "trap_class": [
+      "log_time_offset",
+      "trace_context_lost",
+      "trace_sampling",
+      "metric_scrape_gap"
+    ]
+  }
+}

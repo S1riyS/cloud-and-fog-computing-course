@@ -1,0 +1,223 @@
+# Стенд ЛР2: приложение (gateway, orders, payments) + PostgreSQL + Redis + ELK + Prometheus + Jaeger.
+# Параметры берутся из .env. Запуск: scripts/up.sh
+
+x-app-env: &app-env
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  OTEL_METRICS_EXPORTER: none
+  OTEL_LOGS_EXPORTER: none
+  OTEL_BSP_SCHEDULE_DELAY: "1000"
+  OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER}
+  OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG}
+  LOG_DIR: /logs
+
+x-app: &app
+  build:
+    context: ./app
+  image: lab2-app:local
+  restart: unless-stopped
+  volumes:
+    - applogs:/logs
+
+services:
+  # ---------------- приложение ----------------
+  gateway:
+    <<: *app
+    environment:
+      <<: *app-env
+      SERVICE: gateway
+      PORT: "3001"
+      TZ: ${GATEWAY_TZ}
+      LOG_TIME_MODE: ${GATEWAY_LOG_TIME_MODE}
+    ports: ["3001:3001"]
+    depends_on:
+      orders: { condition: service_healthy }
+    healthcheck: &hc3001
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  orders:
+    <<: *app
+    environment:
+      <<: *app-env
+      SERVICE: orders
+      PORT: "3002"
+      TZ: ${ORDERS_TZ}
+      LOG_TIME_MODE: ${ORDERS_LOG_TIME_MODE}
+      ORDERS_DB_POOL_MAX: ${ORDERS_DB_POOL_MAX}
+      ORDERS_CACHE_TTL_SEC: ${ORDERS_CACHE_TTL_SEC}
+      PAYMENTS_RETRY_MAX: ${PAYMENTS_RETRY_MAX}
+      PAYMENTS_RETRY_BACKOFF_MS: ${PAYMENTS_RETRY_BACKOFF_MS}
+      PAYMENTS_TIMEOUT_MS: ${PAYMENTS_TIMEOUT_MS}
+    mem_limit: ${ORDERS_MEM_LIMIT_MB}m
+    memswap_limit: ${ORDERS_MEM_LIMIT_MB}m
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3002/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  payments:
+    <<: *app
+    environment:
+      <<: *app-env
+      SERVICE: payments
+      PORT: "3003"
+      TZ: ${PAYMENTS_TZ}
+      LOG_TIME_MODE: ${PAYMENTS_LOG_TIME_MODE}
+      PAYMENTS_CONCURRENCY: ${PAYMENTS_CONCURRENCY}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3003/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  loadgen:
+    image: lab2-app:local
+    profiles: ["tools"]
+    entrypoint: ["node", "loadgen/index.js"]
+    user: "${LOCAL_UID:-0}:${LOCAL_GID:-0}"
+    environment:
+      SERVICE: loadgen
+      TARGET: http://gateway:3001
+      RUN_SEED: ${RUN_SEED}
+      USERS: ${USERS}
+      BASE_RPS: ${BASE_RPS}
+      BURST_RPS: ${BURST_RPS}
+      WARMUP_REQ: ${WARMUP_REQ}
+      BURST_REQ: ${BURST_REQ}
+      TAIL_REQ: ${TAIL_REQ}
+    volumes:
+      - ./evidence:/evidence
+    depends_on:
+      gateway: { condition: service_healthy }
+
+  # ---------------- данные ----------------
+  postgres:
+    image: postgres:16.4-alpine
+    cpus: 0.5
+    command: ["postgres", "-c", "max_parallel_workers_per_gather=0", "-c", "shared_buffers=256MB"]
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: shop
+      DB_ROWS: ${DB_ROWS}
+      USERS: ${USERS}
+    volumes:
+      - ./config/db/00-init.sh:/docker-entrypoint-initdb.d/00-init.sh:ro
+      - ./config/db/init.sql:/sql/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d shop"]
+      interval: 5s
+      timeout: 3s
+      retries: 90
+
+  redis:
+    image: redis:7.2-alpine
+    command: ["redis-server", "--maxmemory", "${REDIS_MAXMEMORY_MB}mb", "--maxmemory-policy", "${REDIS_POLICY}", "--save", ""]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ---------------- метрики ----------------
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=2d"]
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports: ["9090:9090"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    command: ["-docker_only=true", "-housekeeping_interval=5s"]
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports: ["8081:8080"]
+
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+    environment:
+      DATA_SOURCE_NAME: postgresql://app:app@postgres:5432/shop?sslmode=disable
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.62.0
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    depends_on:
+      redis: { condition: service_healthy }
+
+  # ---------------- логи (Elastic Stack) и трейсы (Jaeger) ----------------
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      cluster.routing.allocation.disk.threshold_enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    mem_limit: 1200m
+    ulimits:
+      nofile: { soft: 65536, hard: 65536 }
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ports: ["9200:9200"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      TELEMETRY_OPTIN: "false"
+      XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY: lab2lab2lab2lab2lab2lab2lab2lab2lab2
+      NODE_OPTIONS: --max-old-space-size=768
+    ports: ["5601:5601"]
+    depends_on:
+      elasticsearch: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:5601/api/status | grep -q '\"level\":\"available\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.58.1
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      MEMORY_MAX_TRACES: "200000"
+    ports: ["16686:16686"]
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.13.4
+    user: root
+    command: ["filebeat", "-e", "--strict.perms=false"]
+    volumes:
+      - ./config/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - applogs:/logs:ro
+    depends_on:
+      elasticsearch: { condition: service_healthy }
+
+volumes:
+  applogs:
+  esdata:

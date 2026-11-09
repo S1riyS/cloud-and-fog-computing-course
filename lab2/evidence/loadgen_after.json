@@ -1,0 +1,14 @@
+{
+  "phase": "after",
+  "run_id": "after-mw9ix5p1-4a2702",
+  "seed_tag": "f0a8e034ba9f2dd7",
+  "n_total": 6362,
+  "n_5xx": 898,
+  "users_affected": 99,
+  "first_5xx_utc": "2026-11-09T17:16:09Z",
+  "start_utc": "2026-11-09T17:14:24Z",
+  "end_utc": "2026-11-09T17:17:00Z",
+  "burst_start_utc": "2026-11-09T17:14:50Z",
+  "p95_ms": 2429,
+  "sig": "19e25d8a5a223e1572c0e2d2c5105130c17104dcbd4105c65dc354aa785fe6cb"
+}

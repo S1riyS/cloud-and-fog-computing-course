@@ -1,0 +1,14 @@
+NAME                       IMAGE                                                   COMMAND                  SERVICE             CREATED             STATUS                       PORTS
+lab2-cadvisor-1            gcr.io/cadvisor/cadvisor:v0.49.1                        "/usr/bin/cadvisor -…"   cadvisor            About an hour ago   Up About an hour (healthy)   0.0.0.0:8081->8080/tcp
+lab2-elasticsearch-1       docker.elastic.co/elasticsearch/elasticsearch:8.13.4    "/bin/tini -- /usr/l…"   elasticsearch       About an hour ago   Up About an hour (healthy)   0.0.0.0:9200->9200/tcp, 9300/tcp
+lab2-filebeat-1            docker.elastic.co/beats/filebeat:8.13.4                 "/usr/bin/tini -- /u…"   filebeat            About an hour ago   Up About an hour             
+lab2-gateway-1             lab2-app:local                                          "docker-entrypoint.s…"   gateway             About an hour ago   Up About an hour (healthy)   0.0.0.0:3001->3001/tcp
+lab2-jaeger-1              jaegertracing/all-in-one:1.58.1                         "/go/bin/all-in-one-…"   jaeger              About an hour ago   Up About an hour             4317-4318/tcp, 5775/udp, 5778/tcp, 9411/tcp, 14250/tcp, 14268/tcp, 6831-6832/udp, 0.0.0.0:16686->16686/tcp
+lab2-kibana-1              docker.elastic.co/kibana/kibana:8.13.4                  "/bin/tini -- /usr/l…"   kibana              About an hour ago   Up About an hour (healthy)   0.0.0.0:5601->5601/tcp
+lab2-orders-1              lab2-app:local                                          "docker-entrypoint.s…"   orders              32 minutes ago      Up 32 minutes (healthy)      
+lab2-payments-1            lab2-app:local                                          "docker-entrypoint.s…"   payments            About an hour ago   Up About an hour (healthy)   
+lab2-postgres-1            postgres:16.4-alpine                                    "docker-entrypoint.s…"   postgres            About an hour ago   Up About an hour (healthy)   5432/tcp
+lab2-postgres-exporter-1   quay.io/prometheuscommunity/postgres-exporter:v0.15.0   "/bin/postgres_expor…"   postgres-exporter   About an hour ago   Up About an hour             9187/tcp
+lab2-prometheus-1          prom/prometheus:v2.53.0                                 "/bin/prometheus --c…"   prometheus          About an hour ago   Up About an hour (healthy)   0.0.0.0:9090->9090/tcp
+lab2-redis-1               redis:7.2-alpine                                        "docker-entrypoint.s…"   redis               32 minutes ago      Up 32 minutes (healthy)      6379/tcp
+lab2-redis-exporter-1      oliver006/redis_exporter:v1.62.0                        "/redis_exporter"        redis-exporter      About an hour ago   Up About an hour             9121/tcp

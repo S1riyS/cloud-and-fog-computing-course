@@ -1,0 +1,14 @@
+{
+  "phase": "before",
+  "run_id": "before-mw9hp8pt-10f5e0",
+  "seed_tag": "f0a8e034ba9f2dd7",
+  "n_total": 6362,
+  "n_5xx": 5833,
+  "users_affected": 100,
+  "first_5xx_utc": "2026-11-09T16:40:20Z",
+  "start_utc": "2026-11-09T16:40:16Z",
+  "end_utc": "2026-11-09T16:42:51Z",
+  "burst_start_utc": "2026-11-09T16:40:42Z",
+  "p95_ms": 4003,
+  "sig": "53e6cdb4a3fd495860be136c6ff697fb5b3b1e75353823dbe3c5919971e98538"
+}
