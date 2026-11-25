@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: edge-env-quota
+  namespace: edge-test
+spec:
+  hard:
+    requests.cpu: "500m"
+    requests.memory: "256Mi"
+    limits.cpu: "1"
+    limits.memory: "512Mi"
+    pods: "3"

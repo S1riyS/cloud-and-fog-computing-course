@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: quota-violation-pod
+  namespace: edge-test
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: oversized-app
+    image: python:3.9-slim
+    command: ["python", "-c", "import time; print('should not start'); time.sleep(300)"]
+    securityContext:
+      allowPrivilegeEscalation: false
+      runAsNonRoot: true
+      runAsUser: 1000
+      capabilities:
+        drop: ["ALL"]
+      seccompProfile:
+        type: RuntimeDefault
+    resources:
+      requests:
+        memory: "400Mi"
+        cpu: "100m"
+      limits:
+        memory: "400Mi"
+        cpu: "200m"

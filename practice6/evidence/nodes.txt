@@ -1,0 +1,2 @@
+NAME               STATUS     ROLES                         AGE     VERSION
+127.0.0.1.nip.io   NotReady   control-plane,master,worker   3m14s   v1.32.8
